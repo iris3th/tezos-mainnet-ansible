@@ -1,0 +1,67 @@
+---
+- name: Install aptitude using apt
+  apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+- name: Install required system packages
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools']
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu focal stable
+    state: present
+
+- name: install docker module for python
+  pip:
+    name: docker
+- name: Update apt and install docker-ce
+  apt: update_cache=yes name=docker-ce state=latest
+
+- name: Configure overlay
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+
+- name: Restart docker
+  service:
+    name: docker
+    state: restarted
+
+- name: adding "{{ ansible_user }}" to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Configuring docker swarm
+  command: docker swarm init
+  ignore_errors: true
+
+- name: Creating tezos container working directory
+  file:
+    path: /data/tezos
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: '1777'
+
+- name: Pulling tezos mainnet container
+  docker_container:
+    name: tezos
+    state: started
+    image: tezos/tezos:mainnet
+    ports:
+      - "8732:8732"
+      - "9732:9732/udp"
+    volumes:
+       - "/data/tezos:/var/run/tezos/node"
+    cpuset_cpus: '0'
+    hostname: node
+    command: ["tezos-node"]
+    memory: 4096M
+    restart_policy: on-failure
+    restart_retries: 3
