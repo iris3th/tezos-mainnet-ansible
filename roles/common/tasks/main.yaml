@@ -32,15 +32,15 @@
     name: docker
     state: restarted
 
-- name: adding "{{ ansible_user }}" to docker group
+- name: adding user {{ ansible_user }} to docker group
   user:
     name: "{{ ansible_user }}"
     groups: docker
     append: yes
 
-- name: Configuring docker swarm
-  command: docker swarm init
-  ignore_errors: true
+#- name: Configuring docker swarm
+#  command: docker swarm init
+#  ignore_errors: true
 
 - name: Creating tezos container working directory
   file:
@@ -49,7 +49,7 @@
     owner: "{{ ansible_user }}"
     mode: '1777'
 
-- name: Pulling tezos mainnet container
+- name: Pulling configuring and running tezos mainnet container
   docker_container:
     name: tezos
     state: started
